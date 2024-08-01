@@ -7,8 +7,8 @@ from io import BytesIO
 try:
     client = MongoClient(
         "mongodb+srv://ben:hixUhNKprbZuZtAn@doctorsdb.ryjys62.mongodb.net/?retryWrites=true&w=majority&appName=doctorsdb",
-        ssl=True,
-        ssl_cert_reqs='CERT_NONE',  # Disable SSL verification for testing
+        tls=True,
+        tlsAllowInvalidCertificates=True,  # Disable SSL verification for testing
         serverSelectionTimeoutMS=60000  # Increase timeout to 60 seconds
     )
     db = client['doctors']
