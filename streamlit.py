@@ -24,29 +24,29 @@ st.title("Doctor Offices Overview")
 st.header("Filter Options")
 
 st.subheader("Filter by Number of Doctors")
-search_by_num_doctors = st.checkbox("Filter by Number of Doctors")
+search_by_num_doctors = st.checkbox("Filter by Number of Doctors", key="search_by_num_doctors")
 if search_by_num_doctors:
     input_num_doctors = st.number_input("Max Number of Doctors:", min_value=0, value=0, key="num_doctors")
 
 st.subheader("Filter by Doctors Certified After 2019")
-search_by_num_doctors_cert_after_2019 = st.checkbox("Filter by Doctors Certified After 2019")
+search_by_num_doctors_cert_after_2019 = st.checkbox("Filter by Doctors Certified After 2019", key="search_by_num_doctors_cert_after_2019")
 if search_by_num_doctors_cert_after_2019:
     input_num_doctors_cert_after_2019 = st.number_input("Min Number Certified After 2019:", min_value=0, value=0, key="cert_after_2019")
 
 st.subheader("Filter by City")
-filter_by_city = st.checkbox("Filter by City")
+filter_by_city = st.checkbox("Filter by City", key="filter_by_city")
 city_input_placeholder = st.empty()
 if filter_by_city:
     input_city = city_input_placeholder.text_input("City:", value="", max_chars=100, key="city").upper()
 
 st.subheader("Filter by State")
-filter_by_state = st.checkbox("Filter by State (ABV)")
+filter_by_state = st.checkbox("Filter by State (ABV)", key="filter_by_state")
 state_input_placeholder = st.empty()
 if filter_by_state:
     input_state = state_input_placeholder.text_input("State:", value="", max_chars=2, key="state").upper()
 
 st.subheader("Filter by Zipcode")
-filter_by_zipcode = st.checkbox("Filter by Zipcode")
+filter_by_zipcode = st.checkbox("Filter by Zipcode", key="filter_by_zipcode")
 zipcode_input_placeholder = st.empty()
 if filter_by_zipcode:
     input_zipcode = zipcode_input_placeholder.text_input("Zipcode:", value="", max_chars=10, key="zipcode").upper()
@@ -54,15 +54,15 @@ if filter_by_zipcode:
 if st.button('Run Query'):
     query = {}
     if search_by_num_doctors:
-        query["doctor_count"] = {"$lte": input_num_doctors}
+        query["doctor_count"] = {"$lte": st.session_state.get("num_doctors", 0)}
     if search_by_num_doctors_cert_after_2019:
-        query["doctors_certified_2019_or_later"] = {"$gte": input_num_doctors_cert_after_2019}
-    if filter_by_city and input_city:
-        query["city"] = input_city
-    if filter_by_state and input_state:
-        query["state"] = input_state
-    if filter_by_zipcode and input_zipcode:
-        query["postal_code"] = input_zipcode
+        query["doctors_certified_2019_or_later"] = {"$gte": st.session_state.get("cert_after_2019", 0)}
+    if filter_by_city and st.session_state.get("city"):
+        query["city"] = st.session_state.get("city")
+    if filter_by_state and st.session_state.get("state"):
+        query["state"] = st.session_state.get("state")
+    if filter_by_zipcode and st.session_state.get("zipcode"):
+        query["postal_code"] = st.session_state.get("zipcode")
 
     st.header("Search Results:")
     try:
