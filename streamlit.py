@@ -1,11 +1,23 @@
 import streamlit as st
-from pymongo import MongoClient
+from pymongo import MongoClient, errors
 import pandas as pd
 from io import BytesIO
 
-client = MongoClient("mongodb+srv://ben:hixUhNKprbZuZtAn@doctorsdb.ryjys62.mongodb.net/?retryWrites=true&w=majority&appName=doctorsdb")
-db = client['doctors']
-offices_collection = db['offices']
+# MongoDB Connection with Increased Timeout and SSL Disabled for Testing
+try:
+    client = MongoClient(
+        "mongodb+srv://ben:hixUhNKprbZuZtAn@doctorsdb.ryjys62.mongodb.net/?retryWrites=true&w=majority&appName=doctorsdb",
+        ssl=True,
+        ssl_cert_reqs='CERT_NONE',  # Disable SSL verification for testing
+        serverSelectionTimeoutMS=60000  # Increase timeout to 60 seconds
+    )
+    db = client['doctors']
+    offices_collection = db['offices']
+    st.success("Connected to MongoDB successfully.")
+except errors.ServerSelectionTimeoutError as err:
+    st.error(f"Server selection timeout error: {err}")
+except Exception as e:
+    st.error(f"An error occurred: {e}")
 
 st.title("Doctor Offices Overview")
 
@@ -40,7 +52,6 @@ if filter_by_zipcode:
     input_zipcode = zipcode_input_placeholder.text_input("Zipcode:", value="", max_chars=10, key="zipcode").upper()
 
 if st.button('Run Query'):
-
     query = {}
     if search_by_num_doctors:
         query["doctor_count"] = {"$lte": input_num_doctors}
@@ -54,48 +65,51 @@ if st.button('Run Query'):
         query["postal_code"] = input_zipcode
 
     st.header("Search Results:")
-    office_results = offices_collection.find(query)
-    office_results_list = list(office_results)
-    
-    if len(office_results_list) > 0:
-        data = []
-        for office in office_results_list:
-            postal_code = str(office['postal_code']).rstrip('.').split('.')[0]
-            formatted_zipcode = '-'.join([postal_code[:5], postal_code[5:]]) if len(postal_code) > 5 else postal_code
-            address_lines = [
-                f"{office['address']},",
-                f"{office['city']},",
-                f"{office['state']}, {formatted_zipcode}"
-            ]
-            formatted_address = '\n'.join(line for line in address_lines if line)
-            data.append({
-                "Office Name": office['office_name'],
-                "Address": formatted_address,
-                "Total Doctors": office['doctor_count'],
-                "Doctors Certified After 2019": office['doctors_certified_2019_or_later']
-            })
-            st.subheader(f"Office Name: {office['office_name']}")
-            st.write(f"Address:\n{formatted_address}")
-            st.write(f"Total Doctors: {office['doctor_count']}")
-            st.write(f"Doctors Certified After 2019: {office['doctors_certified_2019_or_later']}")
-            st.markdown("---")
+    try:
+        office_results = offices_collection.find(query)
+        office_results_list = list(office_results)
         
-        df = pd.DataFrame(data)
-        
-        def to_excel(df):
-            output = BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                df.to_excel(writer, index=False, sheet_name='Sheet1')
-            processed_data = output.getvalue()
-            return processed_data
-        
-        st.download_button(
-            label="Download Results as Excel",
-            data=to_excel(df),
-            file_name='doctor_offices.xlsx',
-            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-    else:
-        st.write("No matching records found.")
+        if len(office_results_list) > 0:
+            data = []
+            for office in office_results_list:
+                postal_code = str(office['postal_code']).rstrip('.').split('.')[0]
+                formatted_zipcode = '-'.join([postal_code[:5], postal_code[5:]]) if len(postal_code) > 5 else postal_code
+                address_lines = [
+                    f"{office['address']},",
+                    f"{office['city']},",
+                    f"{office['state']}, {formatted_zipcode}"
+                ]
+                formatted_address = '\n'.join(line for line in address_lines if line)
+                data.append({
+                    "Office Name": office['office_name'],
+                    "Address": formatted_address,
+                    "Total Doctors": office['doctor_count'],
+                    "Doctors Certified After 2019": office['doctors_certified_2019_or_later']
+                })
+                st.subheader(f"Office Name: {office['office_name']}")
+                st.write(f"Address:\n{formatted_address}")
+                st.write(f"Total Doctors: {office['doctor_count']}")
+                st.write(f"Doctors Certified After 2019: {office['doctors_certified_2019_or_later']}")
+                st.markdown("---")
+            
+            df = pd.DataFrame(data)
+            
+            def to_excel(df):
+                output = BytesIO()
+                with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                    df.to_excel(writer, index=False, sheet_name='Sheet1')
+                processed_data = output.getvalue()
+                return processed_data
+            
+            st.download_button(
+                label="Download Results as Excel",
+                data=to_excel(df),
+                file_name='doctor_offices.xlsx',
+                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+        else:
+            st.write("No matching records found.")
+    except Exception as e:
+        st.error(f"An error occurred while querying: {e}")
 
 client.close()
